@@ -323,22 +323,6 @@ t8_forest_get_user_data (t8_forest_t forest)
 }
 
 void
-t8_forest_set_user_function (t8_forest_t forest,
-                             t8_generic_function_pointer function)
-{
-  T8_ASSERT (t8_forest_is_initialized (forest)
-             || t8_forest_is_committed (forest));
-  forest->user_function = function;
-}
-
-t8_generic_function_pointer
-t8_forest_get_user_function (t8_forest_t forest)
-{
-  //T8_ASSERT (t8_forest_is_initialized (forest) || t8_forest_is_committed (forest));
-  return forest->user_function;
-}
-
-void
 t8_forest_comm_global_num_elements (t8_forest_t forest)
 {
   int                 mpiret;
@@ -610,6 +594,19 @@ t8_forest_commit (t8_forest_t forest)
   if (forest->mpisize > 1) {
     /* Construct a ghost layer, if desired */
     if (forest->do_ghost) {
+
+      if (forest->cmesh->num_trees_per_eclass[T8_ECLASS_PRISM] > 0) {
+        /* The forest has prism elements, we cannot create the ghost
+         * layer for unbalanced forests */
+        t8_global_productionf ("Warning: The mesh contains prisms and thus "
+                               "the ghost layer can only be created for "
+                               "balanced forests.\n"
+                               "If the forest is not balanced, the created "
+                               "ghost layer is invalid.\n"
+                               "The ghost algorithm was set to balanced_only.\n");
+        forest->ghost_algorithm = 1;
+        T8_ASSERT (t8_forest_is_balanced (forest));
+      }
       /* TODO: ghost type */
       switch (forest->ghost_algorithm) {
       case 1:
@@ -625,12 +622,13 @@ t8_forest_commit (t8_forest_t forest)
         SC_ABORT ("Invalid choice of ghost algorithm");
       }
     }
-    forest->do_ghost = 0;
   }
+
+  forest->do_ghost = 0;
 }
 
 t8_locidx_t
-t8_forest_get_local_num_elements (t8_forest_t forest)
+t8_forest_get_num_element (t8_forest_t forest)
 {
   T8_ASSERT (t8_forest_is_committed (forest));
 
@@ -868,7 +866,7 @@ t8_forest_get_element (t8_forest_t forest, t8_locidx_t lelement_id,
 
   T8_ASSERT (t8_forest_is_committed (forest));
   T8_ASSERT (lelement_id >= 0);
-  if (lelement_id >= t8_forest_get_local_num_elements (forest)) {
+  if (lelement_id >= t8_forest_get_num_element (forest)) {
     return NULL;
   }
   /* We optimized the binary search out by using sc_bsearch,
@@ -1188,11 +1186,9 @@ t8_forest_print_profile (t8_forest_t forest)
                    "forest: Commit runtime.");
     sc_stats_set1 (&stats[10], profile->ghost_runtime,
                    "forest: Ghost runtime.");
-    sc_stats_set1 (&stats[11], profile->ghost_waittime,
-                   "forest: Ghost waittime.");
-    sc_stats_set1 (&stats[12], profile->balance_runtime,
+    sc_stats_set1 (&stats[11], profile->balance_runtime,
                    "forest: Balance runtime.");
-    sc_stats_set1 (&stats[13], profile->balance_rounds,
+    sc_stats_set1 (&stats[12], profile->balance_rounds,
                    "forest: Balance rounds.");
     /* compute stats */
     sc_stats_compute (sc_MPI_COMM_WORLD, T8_PROFILE_NUM_STATS, stats);

@@ -56,21 +56,20 @@ t8_cmesh_get_num_vertices (t8_cmesh_t cmesh, int count_ghosts)
   return num_vertices;
 }
 
-/* TODO: implement for scale < 1 */
+/* TODO: implement for replicated mesh
+ * TODO: implement for scale < 1 */
 static int
 t8_cmesh_vtk_write_file_ext (t8_cmesh_t cmesh, const char *fileprefix,
                              double scale, int write_ghosts)
 {
   T8_ASSERT (cmesh != NULL);
   T8_ASSERT (t8_cmesh_is_committed (cmesh));
+  //T8_ASSERT (!cmesh->set_partition);  /* not implemented for parallel yet */
   T8_ASSERT (fileprefix != NULL);
   T8_ASSERT (scale == 1.);      /* scale = 1 not implemented yet */
 
   if (cmesh->mpirank == 0) {
-    /* Write the pvtu header file. */
-    int                 num_ranks_that_write =
-      cmesh->set_partition ? cmesh->mpisize : 1;
-    if (t8_write_pvtu (fileprefix, num_ranks_that_write, 1, 1, 0, 0, 0, NULL)) {
+    if (t8_write_pvtu (fileprefix, cmesh->mpisize, 1, 1, 0, 0, 0, NULL)) {
       SC_ABORTF ("Error when writing file %s.pvtu\n", fileprefix);
     }
   }
@@ -86,10 +85,8 @@ t8_cmesh_vtk_write_file_ext (t8_cmesh_t cmesh, const char *fileprefix,
     double             *vertices, *vertex;
     int                 k, sk;
     long long           offset, count_vertices;
-    t8_locidx_t         ighost, num_ghosts = 0, num_loc_trees;
-#ifdef T8_ENABLE_DEBUG
+    t8_locidx_t         ighost, num_ghosts, num_loc_trees;
     t8_cghost_t         ghost;
-#endif
     t8_eclass_t         eclass;
 
     num_vertices = t8_cmesh_get_num_vertices (cmesh, write_ghosts);
@@ -283,11 +280,9 @@ t8_cmesh_vtk_write_file_ext (t8_cmesh_t cmesh, const char *fileprefix,
     if (write_ghosts) {
       /* ghost offset types */
       for (ighost = 0; ighost < num_ghosts; ighost++, ++sk) {
-#ifdef T8_ENABLE_DEBUG
         ghost = t8_cmesh_trees_get_ghost (cmesh->trees, ighost);
         /* Check for conversion errors */
         T8_ASSERT (ghost->treeid == (t8_gloidx_t) ((long) ghost->treeid));
-#endif
 #if 0
         fprintf (vtufile, " %ld", (long) ghost->treeid);
 #endif

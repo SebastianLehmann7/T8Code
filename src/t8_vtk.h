@@ -56,7 +56,6 @@
 #define T8_VTK_FORMAT_STRING "binary"
 #endif
 
-/* TODO: Add support for integer data type. */
 typedef enum
 {
   T8_VTK_SCALAR,                /* One double value per element */

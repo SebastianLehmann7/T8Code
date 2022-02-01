@@ -222,7 +222,7 @@ t8_cmesh_load_tree_attributes (t8_cmesh_t cmesh, FILE * fp)
       att_struct.package_id = t8_get_package_id ();
 
       /* read the size of the attribute */
-      ret = fscanf (fp, "size %zu\n", &att_struct.attr_size);
+      ret = fscanf (fp, "size %zd\n", &att_struct.attr_size);
       T8_SAVE_CHECK_CLOSE (ret == 1, fp);
       /* Read the vertices */
       for (i = 0; i < num_vertices; i++) {
@@ -364,7 +364,7 @@ t8_cmesh_load_trees (t8_cmesh_t cmesh, FILE * fp)
   long                num_trees;
 
   ret =
-    fscanf (fp, "Total bytes for trees and ghosts %zu\n", &bytes_for_trees);
+    fscanf (fp, "Total bytes for trees and ghosts %zd\n", &bytes_for_trees);
   T8_SAVE_CHECK_CLOSE (ret == 1, fp);   /* The bytes_for_trees data is currently not used */
   ret = fscanf (fp, "\n--- Tree section ---\n");
   T8_SAVE_CHECK_CLOSE (ret == 0, fp);
@@ -387,7 +387,7 @@ t8_cmesh_load_trees (t8_cmesh_t cmesh, FILE * fp)
     (void) t8_cmesh_trees_get_tree (cmesh->trees, itree);
     /* Check whether the number of attribute is really 1 */
     ret =
-      fscanf (fp, "num_attributes %i\nSize of attributes %zu\n", &num_atts,
+      fscanf (fp, "num_attributes %i\nSize of attributes %zd\n", &num_atts,
               &att_bytes);
     T8_SAVE_CHECK_CLOSE (ret == 2, fp);
     T8_SAVE_CHECK_CLOSE (num_atts == 1, fp);
@@ -726,6 +726,7 @@ t8_cmesh_load_proc_loads (int mpirank, int mpisize, int num_files,
     SC_CHECK_MPI (mpiret);
     mpiret = sc_MPI_Comm_rank (intra, &intrarank);
     SC_CHECK_MPI (mpiret);
+    t8_infof ("[H] My interrank is %i, intra is %i\n", interrank, intrarank);
     /* If the current node number i is smaller than the number of files
      * than the first process on this node loads the file i */
     if (interrank < num_files && intrarank == 0) {
@@ -859,6 +860,8 @@ t8_cmesh_load_and_distribute (const char *fileprefix, int num_files,
 
   T8_ASSERT (mpisize >= num_files);
 
+  t8_debugf ("[H] Enter cmesh load and distribute with %i files\n",
+             num_files);
   /* Try to set the comm type */
   t8_shmem_set_type (comm, T8_SHMEM_BEST_TYPE);
 
